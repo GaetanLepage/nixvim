@@ -7,7 +7,9 @@
   helpers = import ./helpers.nix args;
   serverData = {
     code_actions = {
-      gitsigns = {};
+      gitsigns = {
+        extraPackages = [pkgs.git];
+      };
       shellcheck = {
         package = pkgs.shellcheck;
       };
@@ -74,6 +76,19 @@
         package = pkgs.taplo;
       };
     };
+  };
+
+  sourceOptionType = types.submodule {
+    options = {
+    };
+  };
+
+  sources = mkOption {
+    type = types.submodule {
+      options = {
+      };
+    };
+    description = "Sources";
   };
   # Format the servers to be an array of attrs like the following example
   # [{

@@ -197,6 +197,34 @@ in {
         See `:help vim.diagnostic.config` for more info.
       '';
 
+      extraSources = mkOption {
+        type = with types;
+          attrsOf
+          (
+            attrsOf
+            (submodule {
+              options = {
+                enable = mkEnableOption "this source";
+                withArgs =
+                  helpers.mkNullOrOption types.str
+                  "Raw Lua code to be called with the with function";
+                package = mkOption {
+                  type = with types; nullOr package;
+                  default = null;
+                  description = "Package to use for this source.";
+                };
+              };
+            })
+          );
+        description = "Add sources that are not natively supported by nixvim";
+        example = {
+          diagnostics.foo.enable = true;
+          formatting = {
+            bar = "";
+          };
+        };
+      };
+
       sourcesItems =
         helpers.mkNullOrOption
         (with types; listOf (attrsOf str))
@@ -204,6 +232,8 @@ in {
     };
 
   config = let
+    dump = x: builtins.trace (builtins.deepSeq x x) x;
+
     options =
       {
         inherit
@@ -240,14 +270,14 @@ in {
         temp_dir = cfg.tempDir;
         update_in_insert = cfg.updateInInsert;
 
-        sources = cfg.sourcesItems;
+        sources = dump cfg.sourcesItems;
       }
       // cfg.extraOptions;
   in
     mkIf cfg.enable {
       extraPlugins = [cfg.package];
 
-      extraConfigLua = ''
+      extraConfigLua = dump ''
         require("null-ls").setup(${helpers.toLuaObject options})
       '';
     };

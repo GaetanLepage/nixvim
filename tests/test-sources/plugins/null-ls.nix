@@ -14,6 +14,38 @@
   #   };
   # };
 
+  all-sources = {
+    plugins.null-ls = {
+      enable = true;
+
+      sources = {
+        code_actions = {
+          gitsigns.enable = true;
+          shellcheck.enable = true;
+        };
+        diagnostics = {
+          flake8.enable = true;
+          shellcheck.enable = true;
+          cppcheck.enable = true;
+          gitlint.enable = true;
+        };
+        formatting = {
+          phpcbf.enable = true;
+          alejandra.enable = true;
+          nixfmt.enable = true;
+          prettier.enable = true;
+          black.enable = true;
+          fourmolu.enable = true;
+          fnlfmt.enable = true;
+          stylua.enable = true;
+          cbfmt.enable = true;
+          shfmt.enable = true;
+          taplo.enable = true;
+        };
+      };
+    };
+  };
+
   default = {
     plugins.null-ls = {
       enable = true;
