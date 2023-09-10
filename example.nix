@@ -5,14 +5,16 @@
     # when compared to just installing NeoVim.
     enable = true;
 
-    maps.normal = {
+    maps.byMode.normal = {
       # Equivalent to nnoremap ; :
       ";" = ":";
       # Equivalent to nmap <silent> <buffer> <leader>gg <cmd>Man<CR>
       "<leader>gg" = {
-        silent = true;
-        remap = false;
         action = "<cmd>Man<CR>";
+        options = {
+          silent = true;
+          remap = false;
+        };
         # Etc...
       };
 

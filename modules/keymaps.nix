@@ -5,6 +5,7 @@
 }:
 with lib; let
   helpers = import ../lib/helpers.nix {inherit lib;};
+  cfg = config.maps;
 
   # These are the configuration options that change the behavior of each mapping.
   mapConfigOptions = {
@@ -41,147 +42,217 @@ with lib; let
       "A textual description of this keybind, to be shown in which-key, if you have it.";
   };
 
-  # Generates maps for a lua config
-  genMaps = mode: maps: let
-    /*
-    Take a user-defined action (string or attrs) and return the following attribute set:
-    {
-      action = (string) the actual action to map to this key
-      config = (attrs) the configuration options for this mapping (noremap, silent...)
-    }
-
-    - If the action is a string:
-    {
-      action = action;
-      config = {};
-    }
-
-    - If the action is an attrs:
-    {
-      action = action;
-      config = {
-    inherit (action) <values of the config options that have been explicitly set by the user>
-      };
-    }
-    */
-    normalizeAction = action:
-      if isString action
-      # Case 1: action is a string
-      then {
-        inherit action;
-        config = helpers.emptyTable;
-      }
-      else
-        # Case 2: action is an attrs
-        let
-          # Extract the values of the config options that have been explicitly set by the user
-          config =
-            filterAttrs (n: v: v != null)
-            (getAttrs (attrNames mapConfigOptions) action);
-        in {
-          config =
-            if config == {}
-            then helpers.emptyTable
-            else config;
-          action =
-            if action.lua
-            then helpers.mkRaw action.action
-            else action.action;
-        };
-  in
-    builtins.attrValues (builtins.mapAttrs
-      (key: action: let
-        normalizedAction = normalizeAction action;
-      in {
-        inherit (normalizedAction) action config;
-        inherit key mode;
-      })
-      maps);
-
-  mapOption = types.oneOf [
-    types.str
-    (types.submodule {
-      options =
-        mapConfigOptions
-        // {
-          action =
-            if config.plugins.which-key.enable
-            then helpers.mkNullOrOption types.str "The action to execute"
-            else
-              mkOption {
-                type = types.str;
-                description = "The action to execute.";
-              };
-
-          lua = mkOption {
-            type = types.bool;
-            description = ''
-              If true, `action` is considered to be lua code.
-              Thus, it will not be wrapped in `""`.
-            '';
-            default = false;
-          };
-        };
-    })
-  ];
-
-  mapOptions = mode:
-    mkOption {
-      description = "Mappings for ${mode} mode";
-      type = types.attrsOf mapOption;
-      default = {};
+  modes = {
+    normal.short = "n";
+    insert.short = "i";
+    visual = {
+      desc = "visual and select";
+      short = "v";
     };
+    visualOnly = {
+      desc = "visual only";
+      short = "x";
+    };
+    select.short = "s";
+    terminal.short = "t";
+    normalVisualOp = {
+      desc = "normal, visual, select and operator-pending (same as plain 'map')";
+      short = "";
+    };
+    operator.short = "o";
+    lang = {
+      desc = "normal, visual, select and operator-pending (same as plain 'map')";
+      short = "l";
+    };
+    insertCommand = {
+      desc = "insert and command-line";
+      short = "!";
+    };
+    command.short = "c";
+  };
+
+  modeOptionNames = attrNames modes;
+
+  mkMapOptionSubmodule = {
+    defaultMode ? "",
+    withKeyOpt ? true,
+  }:
+    with types;
+      either
+      str
+      (types.submodule {
+        options =
+          (
+            if withKeyOpt
+            then {
+              key = mkOption {
+                type = types.str;
+                description = "The key to map.";
+                example = "<C-m>";
+              };
+            }
+            else {}
+          )
+          // {
+            mode = mkOption {
+              type = let
+                modeEnum =
+                  enum
+                  # ["" "n" "v" ...]
+                  (
+                    map
+                    (
+                      {short, ...}: short
+                    )
+                    (attrValues modes)
+                  );
+              in
+                either modeEnum (listOf modeEnum);
+              description = ''
+                One or several modes.
+                Use the short-names (`"n"`, `"v"`, ...).
+                See `:h map-modes` to learn more.
+              '';
+              default = defaultMode;
+              example = ["n" "v"];
+            };
+
+            action =
+              if config.plugins.which-key.enable
+              then helpers.mkNullOrOption types.str "The action to execute"
+              else
+                mkOption {
+                  type = types.str;
+                  description = "The action to execute.";
+                };
+
+            lua = mkOption {
+              type = types.bool;
+              description = ''
+                If true, `action` is considered to be lua code.
+                Thus, it will not be wrapped in `""`.
+              '';
+              default = false;
+            };
+
+            options = mapConfigOptions;
+          };
+      });
 in {
-  options = {
-    maps = mkOption {
-      type = types.submodule {
-        options = {
-          normal = mapOptions "normal";
-          insert = mapOptions "insert";
-          select = mapOptions "select";
-          visual = mapOptions "visual and select";
-          terminal = mapOptions "terminal";
-          normalVisualOp = mapOptions "normal, visual, select and operator-pending (same as plain 'map')";
+  imports =
+    map
+    (
+      mode:
+        mkRenamedOptionModule
+        ["maps" mode]
+        ["maps" "byMode" mode]
+    )
+    # ["normal" "normalVisualOp" ...]
+    modeOptionNames;
 
-          visualOnly = mapOptions "visual only";
-          operator = mapOptions "operator-pending";
-          insertCommand = mapOptions "insert and command-line";
-          lang = mapOptions "insert, command-line and lang-arg";
-          command = mapOptions "command-line";
-        };
-      };
-      default = {};
-      description = ''
-        Custom keybindings for any mode.
+  options.maps = {
+    allSilent = mkOption {
+      type = types.bool;
+      default = false;
+      description = "Set this to `true` to make **all** of the nixvim key mappings silent.";
+      example = true;
+    };
 
-        For plain maps (e.g. just 'map' or 'remap') use maps.normalVisualOp.
-      '';
+    byMode =
+      mapAttrs
+      (
+        modeName: modeProps: let
+          desc = modeProps.desc or modeName;
+        in
+          mkOption {
+            description = "Mappings for ${desc} mode";
+            type = with types;
+              attrsOf
+              (
+                either
+                str
+                (
+                  mkMapOptionSubmodule
+                  {
+                    defaultMode = modeProps.short;
+                    withKeyOpt = false;
+                  }
+                )
+              );
+            default = {};
+          }
+      )
+      modes;
 
-      example = ''
-        maps = {
-          normalVisualOp.";" = ":"; # Same as noremap ; :
-          normal."<leader>m" = {
-            silent = true;
-            action = "<cmd>make<CR>";
-          }; # Same as nnoremap <leader>m <silent> <cmd>make<CR>
-        };
-      '';
+    list = mkOption {
+      type = types.listOf (mkMapOptionSubmodule {});
+      default = [];
+      example = [
+        {
+          key = "<C-m>";
+          action = "<cmd>make<CR>";
+          options.silent = true;
+        }
+      ];
     };
   };
 
   config = let
-    mappings =
-      (genMaps "" config.maps.normalVisualOp)
-      ++ (genMaps "n" config.maps.normal)
-      ++ (genMaps "i" config.maps.insert)
-      ++ (genMaps "v" config.maps.visual)
-      ++ (genMaps "x" config.maps.visualOnly)
-      ++ (genMaps "s" config.maps.select)
-      ++ (genMaps "t" config.maps.terminal)
-      ++ (genMaps "o" config.maps.operator)
-      ++ (genMaps "l" config.maps.lang)
-      ++ (genMaps "!" config.maps.insertCommand)
-      ++ (genMaps "c" config.maps.command);
+    modeMapsAsList =
+      flatten
+      (
+        mapAttrsToList
+        (
+          modeOptionName: modeProps:
+            mapAttrsToList
+            (
+              key: action:
+                (
+                  if isString action
+                  then {
+                    mode = modeProps.short;
+                    inherit action;
+                    lua = false;
+                    options = {};
+                  }
+                  else action
+                )
+                // {inherit key;}
+            )
+            cfg.byMode.${modeOptionName}
+        )
+        modes
+      );
+
+    mappings = let
+      normalizeMapping = keyMapping:
+        with keyMapping; {
+          inherit
+            mode
+            key
+            ;
+
+          action =
+            if lua
+            then helpers.mkRaw action
+            else action;
+
+          options = let
+            options' =
+              keyMapping.options
+              // (
+                if cfg.allSilent
+                then {silent = true;}
+                else {}
+              );
+          in
+            if options' == {}
+            then helpers.emptyTable
+            else options';
+        };
+    in
+      map normalizeMapping
+      (cfg.list ++ modeMapsAsList);
   in {
     extraConfigLua =
       optionalString (mappings != [])
@@ -193,9 +264,9 @@ in {
             local __nixvim_binds = ${helpers.toLuaObject mappings}
             for i, map in ipairs(__nixvim_binds) do
               if not map.action then
-                require("which-key").register({[map.key] = {name =  map.config.desc }})
+                require("which-key").register({[map.key] = {name =  map.options.desc }})
               else
-                vim.keymap.set(map.mode, map.key, map.action, map.config)
+                vim.keymap.set(map.mode, map.key, map.action, map.options)
               end
             end
           end
@@ -206,7 +277,7 @@ in {
           do
             local __nixvim_binds = ${helpers.toLuaObject mappings}
             for i, map in ipairs(__nixvim_binds) do
-              vim.keymap.set(map.mode, map.key, map.action, map.config)
+              vim.keymap.set(map.mode, map.key, map.action, map.options)
             end
           end
           -- }}}
