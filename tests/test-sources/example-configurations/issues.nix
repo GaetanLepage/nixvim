@@ -138,6 +138,6 @@
   };
 
   "71" = {
-    maps.normal."<leader>hb" = "<cmd>lua require('gitsigns').blame_line{full=true}<cr>";
+    maps.byMode.normal."<leader>hb" = "<cmd>lua require('gitsigns').blame_line{full=true}<cr>";
   };
 }
