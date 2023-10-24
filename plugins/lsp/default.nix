@@ -7,22 +7,34 @@
 with lib; let
   cfg = config.plugins.lsp;
   helpers = import ../helpers.nix {inherit lib;};
+  basePluginPath = ["plugins" "lsp"];
 in {
   imports = [
     ./language-servers
+    # TODO: Those warnings have been added on 2023/10/24. Remove in early December.
+    (
+      mkRenamedOptionModule
+      (basePluginPath ++ ["keymaps" "silent"])
+      (basePluginPath ++ ["keymapsSilent"])
+    )
+    (
+      mkRenamedOptionModule
+      (basePluginPath ++ ["keymaps" "lspBuf"])
+      (basePluginPath ++ ["keymaps" "lsp" "buf"])
+    )
   ];
 
   options = {
     plugins.lsp = {
       enable = mkEnableOption "neovim's built-in LSP";
 
-      keymaps = {
-        silent = mkOption {
-          type = types.bool;
-          description = "Whether nvim-lsp keymaps should be silent";
-          default = false;
-        };
+      keymapsSilent = mkOption {
+        type = types.bool;
+        description = "Whether nvim-lsp keymaps should be silent";
+        default = false;
+      };
 
+      keymaps = {
         diagnostic = mkOption {
           type = with types; attrsOf (either str attrs);
           description = "Mappings for `vim.diagnostic.<action>` functions.";
@@ -33,17 +45,28 @@ in {
           default = {};
         };
 
-        lspBuf = mkOption {
-          type = with types; attrsOf (either str attrs);
-          description = "Mappings for `vim.lsp.buf.<action>` functions.";
-          example = {
-            "gd" = "definition";
-            "gD" = "references";
-            "gt" = "type_definition";
-            "gi" = "implementation";
-            "K" = "hover";
+        lsp = {
+          buf = mkOption {
+            type = with types; attrsOf (either str attrs);
+            description = "Mappings for `vim.lsp.buf.<action>` functions.";
+            example = {
+              "gd" = "definition";
+              "gD" = "references";
+              "gt" = "type_definition";
+              "gi" = "implementation";
+              "K" = "hover";
+            };
+            default = {};
           };
-          default = {};
+
+          util = mkOption {
+            type = with types; attrsOf (either str attrs);
+            description = "Mappings for `vim.lsp.util.<action>` functions.";
+            example = {
+              "TODO" = "TODO";
+            };
+            default = {};
+          };
         };
       };
 
@@ -131,14 +154,15 @@ in {
 
               options =
                 {
-                  inherit (cfg.keymaps) silent;
+                  silent = cfg.keymapsSilent;
                 }
                 // actionProps;
             }
           );
       in
         (mkMaps "vim.diagnostic." cfg.keymaps.diagnostic)
-        ++ (mkMaps "vim.lsp.buf." cfg.keymaps.lspBuf);
+        ++ (mkMaps "vim.lsp.buf." cfg.keymaps.lsp.buf)
+        ++ (mkMaps "vim.lsp.util." cfg.keymaps.lsp.util);
 
       # Enable all LSP servers
       extraConfigLua = ''
