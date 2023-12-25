@@ -1,25 +1,48 @@
 {
   empty = {
-    # Harpoon expects to access `~/.local/share/nvim/harpoon.json` which is not available in the
-    # test environment
-    tests.dontRun = true;
-
     plugins.harpoon.enable = true;
   };
 
-  telescopeEnabled = {
-    # Harpoon expects to access `~/.local/share/nvim/harpoon.json` which is not available in the
-    # test environment
-    tests.dontRun = true;
-
-    plugins.telescope = {
-      enable = true;
-    };
+  example = {
+    plugins.telescope.enable = true;
 
     plugins.harpoon = {
       enable = true;
 
-      enableTelescope = true;
+      telescopeSupport = {
+        enable = true;
+        keyboardShortcut = "<C-p>";
+      };
+
+      settings = {
+        saveOnToggle = false;
+        syncOnUiClose = false;
+        key = ''
+          function()
+            return vim.loop.cwd()
+          end
+        '';
+      };
+
+      default = {
+        selectWithNil = false;
+        encode = false;
+        decode = null;
+        display = null;
+        select = null;
+        equals = null;
+        createListItem = null;
+        bufLeave = null;
+        vimLeavePre = null;
+        getRootDir = ''
+          function()
+            return vim.loop.cwd()
+          end
+        '';
+      };
+
+      lists = {};
+
       keymapsSilent = true;
       keymaps = {
         addFile = "<leader>a";
@@ -31,49 +54,7 @@
         };
         navNext = "<leader>b";
         navPrev = "<leader>c";
-        gotoTerminal = {
-          "1" = "J";
-          "2" = "K";
-          "3" = "L";
-          "4" = "M";
-        };
-        cmdToggleQuickMenu = "<leader>d";
-        tmuxGotoTerminal = {
-          "1" = "<C-1>";
-          "2" = "<C-2>";
-          "{down-of}" = "<leader>g";
-        };
       };
-      saveOnToggle = false;
-      saveOnChange = true;
-      enterOnSendcmd = false;
-      tmuxAutocloseWindows = false;
-      excludedFiletypes = ["harpoon"];
-      markBranch = false;
-      projects = {
-        "$HOME/personal/vim-with-me/server" = {
-          termCommands = [
-            "./env && npx ts-node src/index.ts"
-          ];
-        };
-      };
-      menu = {
-        width = 60;
-        height = 10;
-        borderChars = ["─" "│" "─" "│" "╭" "╮" "╯" "╰"];
-      };
-    };
-  };
-
-  telescopeDisabled = {
-    # Harpoon expects to access `~/.local/share/nvim/harpoon.json` which is not available in the
-    # test environment
-    tests.dontRun = true;
-
-    plugins.harpoon = {
-      enable = true;
-
-      enableTelescope = false;
     };
   };
 }
