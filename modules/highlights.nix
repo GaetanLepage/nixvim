@@ -9,49 +9,84 @@ with lib; {
     highlight = mkOption {
       type = types.attrsOf helpers.nixvimTypes.highlight;
       default = {};
-      description = "Define highlight groups";
-      example = ''
-        highlight = {
-          Comment.fg = "#ff0000";
-        };
+      description = ''
+        DEPRECATED: use `highlights` (with an `s`) instead.
+        Define highlight groups.
       '';
+      example = {
+        Comment.fg = "#ff0000";
+      };
+      visible = false;
+    };
+
+    highlights = mkOption {
+      type = types.attrsOf helpers.nixvimTypes.highlight;
+      default = {};
+      description = "Define highlight groups";
+      example = {
+        Comment.fg = "#ff0000";
+      };
     };
 
     match = mkOption {
       type = types.attrsOf types.str;
       default = {};
-      description = "Define match groups";
-      example = ''
-        match = {
-          ExtraWhitespace = "\\s\\+$";
-        };
+      description = ''
+        DEPRECATED: use `matchGroups` (with an `s`) instead.
+        Define match groups
       '';
+      example = {
+        ExtraWhitespace = "\\s\\+$";
+      };
+      visible = false;
+    };
+
+    matchGroups = mkOption {
+      type = types.attrsOf types.str;
+      default = {};
+      description = "Define match groups";
+      example = {
+        ExtraWhitespace = "\\s\\+$";
+      };
     };
   };
 
-  config = mkIf (config.highlight != {} || config.match != {}) {
-    extraConfigLuaPost =
-      (optionalString (config.highlight != {}) ''
-        -- Highlight groups {{
-        do
-          local highlights = ${helpers.toLuaObject config.highlight}
+  config = let
+    highlights = config.highlight // config.highlights;
+    matchGroups = config.match // config.matchGroups;
+  in
+    mkIf (highlights != {} || matchGroups != {}) {
+      warnings =
+        (optional (config.highlight != {}) ''
+          Nixvim: `highlight`
+        '')
+        ++ (optional (config.match != {}) ''
+          '');
 
-          for k,v in pairs(highlights) do
-            vim.api.nvim_set_hl(0, k, v)
-          end
-        end
-        -- }}
-      '')
-      + (optionalString (config.match != {}) ''
-        -- Match groups {{
-          do
-            local match = ${helpers.toLuaObject config.match}
+      extraConfigLuaPost =
+        (
+          optionalString (highlights != {}) ''
+            -- Highlight groups {{
+            do
+              local highlights = ${helpers.toLuaObject highlights}
 
-            for k,v in pairs(match) do
-              vim.fn.matchadd(k, v)
+              for k,v in pairs(highlights) do
+                vim.api.nvim_set_hl(0, k, v)
+              end
             end
-          end
-          -- }}
-      '');
-  };
+            -- }}
+          ''
+        )
+        + (optionalString (matchGroups != {}) ''
+          -- Match groups {{
+            do
+              local match_groups = ${helpers.toLuaObject matchGroups}
+
+              for k,v in pairs(match_groups) do
+                vim.fn.matchadd(k, v)
+              end
+            end
+            -- }}
+        '');
+    };
 }
