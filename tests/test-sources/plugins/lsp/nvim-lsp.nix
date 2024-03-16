@@ -110,13 +110,15 @@
         lua-ls.enable = true;
         metals.enable = true;
         nil_ls.enable = true;
-        nixd.enable = true;
+        # TODO As of 2024-03-16, nixd is broken (see https://github.com/nix-community/nixd/issues/357)
+        nixd.enable = false;
         omnisharp.enable = true;
         pest_ls.enable = true;
         prismals.enable = true;
         pylsp.enable = true;
         pyright.enable = true;
-        rnix-lsp.enable = true;
+        # TODO As of 2024-03-16, rnix-lsp is broken
+        rnix-lsp.enable = false;
         ruff-lsp.enable = true;
         rust-analyzer = {
           enable = true;

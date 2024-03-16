@@ -33,7 +33,8 @@
             installCargo = true;
             installRustc = true;
           };
-          rnix-lsp.enable = true;
+          # TODO As of 2024-03-16, rnix-lsp is broken
+          rnix-lsp.enable = false;
         };
       };
     };
@@ -78,7 +79,8 @@
       lsp = {
         enable = true;
         servers = {
-          rnix-lsp.enable = true;
+          # TODO As of 2024-03-16, rnix-lsp is broken
+          rnix-lsp.enable = false;
           rust-analyzer = {
             enable = true;
             installCargo = true;
