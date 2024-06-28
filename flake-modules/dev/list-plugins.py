@@ -10,7 +10,8 @@ QUESTION_MARK = "❔"
 
 EXCLUDES: list[str] = [
     # Not plugin files
-    "colorschemes/base16/theme-list.nix",
+    "plugins/colorschemes/base16/theme-list.nix",
+    "plugins/utils/startify/options.nix",
     "helpers.nix",
     "Helpers.nix",
     "TEMPLATE.nix",
