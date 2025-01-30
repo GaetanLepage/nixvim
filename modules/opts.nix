@@ -33,6 +33,13 @@ let
       luaApi = "g";
       description = "Global variables (`vim.g.*`)";
     };
+
+    bufferVars = {
+      prettyName = "buffer-scoped variables";
+      luaVariableName = "buffer_local_variables";
+      luaApi = "b";
+      description = "Buffer-scoped variables (`vim.b.*`)";
+    };
   };
 in
 {
