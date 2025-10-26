@@ -25,8 +25,11 @@ lib.nixvim.plugins.mkNeovimPlugin {
     { inherit (config.plugins.efmls-configs.setup) warnings; }
   ];
 
-  hasSettings = false;
   callSetup = false;
+
+  settingsExample = {
+    # TODO
+  };
 
   extraOptions =
     let
@@ -103,17 +106,19 @@ lib.nixvim.plugins.mkNeovimPlugin {
               "HTML"
               "JSON"
             ]
-            ++ lib.singleton {
-              # NOTE: we need a warnings option for `mkRenamedOptionModule` to warn about unexpected definitions
-              # This can be removed when all rename aliases are gone
-              options.warnings = lib.mkOption {
-                type = with lib.types; listOf str;
-                description = "Warnings to propagate to nixvim's `warnings` option.";
-                default = [ ];
-                internal = true;
-                visible = false;
-              };
-            };
+            ++ [
+              {
+                # NOTE: we need a warnings option for `mkRenamedOptionModule` to warn about unexpected definitions
+                # This can be removed when all rename aliases are gone
+                options.warnings = lib.mkOption {
+                  type = with lib.types; listOf str;
+                  description = "Warnings to propagate to nixvim's `warnings` option.";
+                  default = [ ];
+                  internal = true;
+                  visible = false;
+                };
+              }
+            ];
         };
         description = "Configuration for each filetype. Use `all` to match any filetype.";
         default = { };
@@ -162,34 +167,6 @@ lib.nixvim.plugins.mkNeovimPlugin {
         };
 
       nixvimPkgs = lib.lists.partition (v: lib.hasAttr v cfg.toolPackages) pkgsForTools.nixvim;
-
-      mkToolValue =
-        kind: opt:
-        map (
-          tool: if lib.isString tool then lib.nixvim.mkRaw "require 'efmls-configs.${kind}.${tool}'" else tool
-        ) (lib.toList opt);
-
-      setupOptions =
-        (lib.mapAttrs
-          (
-            _:
-            {
-              linter ? [ ],
-              formatter ? [ ],
-            }:
-            (mkToolValue "linters" linter) ++ (mkToolValue "formatters" formatter)
-          )
-          (
-            builtins.removeAttrs cfg.setup [
-              "all"
-              "warnings"
-            ]
-          )
-        )
-        // {
-          "=" =
-            (mkToolValue "linters" cfg.setup.all.linter) ++ (mkToolValue "formatters" cfg.setup.all.formatter);
-        };
     in
     {
       # TODO: print the location of the offending options
@@ -204,7 +181,7 @@ lib.nixvim.plugins.mkNeovimPlugin {
 
       lsp.servers.efm = {
         enable = true;
-        config.settings.languages = setupOptions;
+        config.settings.languages = cfg.settings;
       };
 
       extraPackages = map (name: cfg.toolPackages.${name}) nixvimPkgs.right;
