@@ -72,6 +72,10 @@ let
     "rustaceanvim"
   ]
   ++ lib.optionals hostPlatform.isDarwin [
+    # 2026-02-04 dependency llvmPackages_22.llvm is broken
+    "ameba"
+    "crystal"
+
     # 2025-11-26 build failure
     "nvim-spectre"
 
