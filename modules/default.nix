@@ -24,6 +24,7 @@
     ./output.nix
     ./performance.nix
     ./plugins.nix
+    ./treesitter
     ./wrappers.nix
   ];
 }
